@@ -5,6 +5,9 @@
 ## Testing mode
 TESTING=1
 
+## Verbosity
+VERBOSE=1
+
 ## Contains ldap variables
 source ldap-vars.inc
 
@@ -15,25 +18,38 @@ function main {
   
   # For capturing cmd output
   local output=""
-  
+
+  # Get the cert list from puppet 
+  if [ $VERBOSE -eq 1 ]; then
+    echo "Getting puppet cert list"
+  fi
   certs=$(get_cert_list)
   if [ $? -ne 0 ]; then
     echo "Failed to get puppet cert list"
     echo "$certs"
     exit 1
   fi
+  OFS=$IFS
+  IFS=$'\n'
+  read -ra certs <<< "$certs"
+  IFS=$OFS
   
-  for cert in $certs; do
-  
+  for cert in "${certs[@]}"; do
+
     # Parse cert line
     read -ra cert_details <<< "$cert"
     local host="${cert_details[0]}"
+
+    if [ $VERBOSE -eq 1 ]; then
+      echo "Processing cert for $host"
+    fi
     
     # Search ldap for the host
     find_host "$host"
-    if [ $? -eq 0 ]; then
+    local result=$?
+    if [ $result -eq 0 ]; then
       sign_host_cert "$host"
-    else
+    elif [ $result -eq 1 ]; then
       clear_host_cert "$host"
     fi
   done
@@ -55,7 +71,7 @@ function resolve_host_address {
   # Resolve a host's address
   
   local host="$1"
-  
+
   dig +short "$host"
   return $?
 }
@@ -63,14 +79,25 @@ function resolve_host_address {
 function find_host {
   # Search ldap for a host by fqdn and ip address
   
-  local hostname="$1"
+  local host="$1"
   
   local output=""
+  local search_filter="(&(objectClass=puppetClient)(cn=$host))"
+
+  if [ $VERBOSE -eq 1 ]; then
+    echo "Searching LDAP for $host using filter $search_filter"
+  fi
   
-  search_filter="(&(objectClass=puppetClient)(cn=$host)"
   output=$(ldapsearch -ZZ -h $ldaphost -D $ldapbinddn -w $ldappass -b $ldapbasedn $search_filter 2>&1)
+  if [ $? -ne 0 ]; then
+    echo "LDAP search failed:"
+    echo "$output"
+    return 2
+  elif [ $VERBOSE -eq 1 ]; then
+    echo "$output"
+  fi
+
   echo $output | grep "$host" > /dev/null
-  
   return $?
 }
 
@@ -80,6 +107,14 @@ function sign_host_cert {
   local host="$1"
   
   local output=""
+
+  if [ $VERBOSE -eq 1 ]; then
+    echo "Signing $host's certificate"
+  fi
+
+  if [ $TESTING -eq 1 ]; then
+    return 0
+  fi
   
   output=$(sudo puppet cert sign "$host" 2>&1)
   if [ $? -ne 0 ]; then
@@ -97,6 +132,14 @@ function clear_host_cert {
   local host="$1"
   
   local output=""
+
+  if [ $VERBOSE -eq 1 ]; then
+    echo "Clearing $host's certificate"
+  fi
+
+  if [ $TESTING -eq 1 ]; then
+    return 0
+  fi
   
   output=$(sudo puppet cert --clean "$host" 2>&1)
   if [ $? -ne 0 ]; then
