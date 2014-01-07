@@ -23,13 +23,15 @@ function main {
   if [ $VERBOSE -eq 1 ]; then
     echo "Getting puppet cert list"
   fi
-  certs=$(get_cert_list)
+  local certs=$(get_cert_list)
   if [ $? -ne 0 ]; then
     echo "Failed to get puppet cert list"
     echo "$certs"
     exit 1
   fi
-  OFS=$IFS
+  
+  # Parse the cert list into an array
+  local OFS=$IFS
   IFS=$'\n'
   read -ra certs <<< "$certs"
   IFS=$OFS
