@@ -29,6 +29,9 @@ function main {
     echo "$certs"
     exit 1
   fi
+  if [ $VERBOSE -eq 1 ] && [ -z "$certs" ]; then
+    echo "No unsigned certs to process"
+  fi 
   
   # Parse the cert list into an array
   local OFS=$IFS
