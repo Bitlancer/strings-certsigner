@@ -3,10 +3,10 @@
 # Global vars
 
 ## Testing mode
-TESTING=1
+TESTING=0
 
 ## Verbosity
-VERBOSE=1
+VERBOSE=0
 
 ## Contains ldap variables
 source ldap-vars.inc
@@ -67,7 +67,7 @@ function get_cert_list {
     echo "uneffectible.dfw01.bitlancer-infra.net (FD:E7:41:C9:2C:B7:5C:27:11:0C:8F:9C:1D:F6:F9:46)"
     return 0
   else
-    sudo puppet cert list
+    puppet cert list
     return $?
   fi
 }
@@ -121,7 +121,7 @@ function sign_host_cert {
     return 0
   fi
   
-  output=$(sudo puppet cert sign "$host" 2>&1)
+  output=$(puppet cert sign "$host" 2>&1)
   if [ $? -ne 0 ]; then
     echo "Failed to sign cert for $host"
     echo $output
@@ -146,7 +146,7 @@ function clear_host_cert {
     return 0
   fi
   
-  output=$(sudo puppet cert --clean "$host" 2>&1)
+  output=$(puppet cert --clean "$host" 2>&1)
   if [ $? -ne 0 ]; then
     echo "Failed to clear cert for $host"
     echo $output
