@@ -44,6 +44,7 @@ function main {
     # Parse cert line
     read -ra cert_details <<< "$cert"
     local host="${cert_details[0]}"
+    host=$(echo $host | sed -e 's/^"//'  -e 's/"$//')
 
     if [ $VERBOSE -eq 1 ]; then
       echo "Processing cert for $host"
